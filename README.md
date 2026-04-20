@@ -1,6 +1,6 @@
 # Bellini College Course Management System
 
-A Streamlit-based project implementation for COP 4020 Project 2 using the Bellini S25, F25, and S26 Excel datasets.
+A Streamlit-based project implementation for CEN 4020 Project 2 using the Bellini S25, F25, and S26 Excel datasets.
 
 ## Implemented user stories
 
@@ -37,8 +37,6 @@ pip install -r requirements.txt
 streamlit run app.py
 ```
 
-## Demo notes
-Use the built-in **Demo Guide** page in the sidebar for sunny-day and rainy-day recording ideas for each user story.
 
 ## Suggested demo flow
 1. Dashboard
