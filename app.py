@@ -16,12 +16,15 @@ from bellini.services import (
 )
 
 DATA_DIR = Path(__file__).resolve().parent / "data"
+APP_STATE_PATH = DATA_DIR / "bellini_app_state.xlsx"
 
 st.set_page_config(page_title="Bellini College Course Management System", layout="wide")
 
 
 @st.cache_data
 def load_initial_dataframe() -> pd.DataFrame:
+    if APP_STATE_PATH.exists():
+        return pd.read_excel(APP_STATE_PATH)
     loader = BelliniDataLoader(DATA_DIR)
     return loader.load_all(include_new_classes=True)
 
@@ -38,10 +41,9 @@ def build_services():
 
 def save_repo(repo: BelliniRepository):
     st.session_state.bellini_df = repo.all_data()
-    # Save the updated DataFrame back to the Excel file
-    data_file_path = DATA_DIR / "Bellini Classes S25.xlsx"  # Update this to the correct file if needed
-    data_file_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
-    st.session_state.bellini_df.to_excel(data_file_path, index=False)
+    APP_STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
+    st.session_state.bellini_df.to_excel(APP_STATE_PATH, index=False)
+    load_initial_dataframe.clear()
 
 
 def dashboard(df: pd.DataFrame):
@@ -162,16 +164,31 @@ def visualize_student_schedule(df: pd.DataFrame, schedule_service: ScheduleServi
 
 def analyze_course_frequency(df: pd.DataFrame, analytics_service: AnalyticsService):
     st.header("US2: Analyze Course Frequency")
-    semester = st.selectbox("Semester", options=sorted(df["semester"].unique()), key="frequency_sem")
-    # Ensure the filtered result is a DataFrame
-    filtered_df = df[df["semester"].isin(["S25", "F25", "S26"])]
-    if not isinstance(filtered_df, pd.DataFrame):
-        filtered_df = pd.DataFrame(filtered_df)
-    freq = analytics_service.course_frequency(filtered_df).head(50)
-    st.dataframe(freq, use_container_width=True)
-    bottlenecks = freq[freq["bottleneck_flag"]]
+    supported_semesters = [semester for semester in ["S25", "F25", "S26"] if semester in df["semester"].unique()]
+    comparison_df = df[df["semester"].isin(supported_semesters)].copy()
+    comparison_df = comparison_df[comparison_df["course_code"].fillna("").str.strip() != ""]
+
+    freq = analytics_service.course_frequency(comparison_df).copy()
+    freq["section_gap"] = freq[supported_semesters].max(axis=1) - freq[supported_semesters].min(axis=1)
+    freq = freq.sort_values(["section_gap", "total_sections", "course_code"], ascending=[False, False, True])
+
+    st.caption("Compare section counts across S25, F25, and S26 to spot courses with uneven coverage or limited offerings.")
+    st.dataframe(
+        freq[["course_code", "course_title", *supported_semesters, "total_sections", "section_gap", "bottleneck_flag"]].head(50),
+        use_container_width=True,
+    )
+
+    bottlenecks = freq[freq["bottleneck_flag"]].head(15)
     if not bottlenecks.empty:
-        fig = px.bar(bottlenecks.head(15), x="course_code", y=["S25", "F25", "S26"], barmode="group", title="Potential Bottleneck Courses")
+        fig = px.bar(
+            bottlenecks,
+            x="course_code",
+            y=supported_semesters,
+            barmode="group",
+            hover_data=["course_title", "total_sections", "section_gap"],
+            title="Potential Bottleneck Courses Across Semesters",
+        )
+        fig.update_layout(yaxis_title="Sections", xaxis_title="Course Code")
         st.plotly_chart(fig, use_container_width=True)
 
 

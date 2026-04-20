@@ -108,7 +108,12 @@ class BelliniRepository:
         for col, default in defaults.items():
             if col not in df.columns:
                 df[col] = default
-        df["enrollment"] = pd.to_numeric(df.get("enrollment"), errors="coerce").fillna(0).astype(int)
+        # Ensure 'enrollment' column is properly handled
+        enrollment_col = df.get("enrollment")
+        if enrollment_col is not None:
+            df["enrollment"] = pd.to_numeric(enrollment_col, errors="coerce").fillna(0).astype(int)
+        else:
+            df["enrollment"] = 0
         df["crn"] = pd.to_numeric(df.get("crn"), errors="coerce")
         df["course_section"] = pd.to_numeric(df.get("course_section"), errors="coerce")
         df["course_key"] = df["subject"].fillna("").astype(str).str.strip() + " " + df["course_number"].fillna("").astype(str).str.strip()
@@ -162,4 +167,4 @@ def days_overlap(days_a: str, days_b: str) -> bool:
 def time_overlap(start_a: Optional[int], end_a: Optional[int], start_b: Optional[int], end_b: Optional[int]) -> bool:
     if None in {start_a, end_a, start_b, end_b}:
         return False
-    return max(start_a, start_b) < min(end_a, end_b)
+    return max(start_a or 0, start_b or 0) < min(end_a or float('inf'), end_b or float('inf'))
