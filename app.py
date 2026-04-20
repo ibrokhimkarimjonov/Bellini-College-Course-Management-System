@@ -15,7 +15,7 @@ from bellini.services import (
     ScheduleService,
 )
 
-DATA_DIR = Path(__file__).resolve().parent.parent / "data"
+DATA_DIR = Path(__file__).resolve().parent / "data"
 
 st.set_page_config(page_title="Bellini College Course Management System", layout="wide")
 
@@ -38,6 +38,10 @@ def build_services():
 
 def save_repo(repo: BelliniRepository):
     st.session_state.bellini_df = repo.all_data()
+    # Save the updated DataFrame back to the Excel file
+    data_file_path = DATA_DIR / "Bellini Classes S25.xlsx"  # Update this to the correct file if needed
+    data_file_path.parent.mkdir(parents=True, exist_ok=True)  # Ensure the directory exists
+    st.session_state.bellini_df.to_excel(data_file_path, index=False)
 
 
 def dashboard(df: pd.DataFrame):
@@ -89,7 +93,7 @@ def manage_class_data(repo: BelliniRepository):
                 from bellini.utils import parse_time_range
                 class_data["start_time"], class_data["end_time"] = parse_time_range(class_data["meeting_times"])
                 repo.add_class(class_data)
-                save_repo(repo)
+                save_repo(repo)  # Ensure changes are saved to session state
                 st.success(f"Added class CRN {class_data['crn']}")
 
     with st.expander("Update Existing Class"):
@@ -111,14 +115,14 @@ def manage_class_data(repo: BelliniRepository):
                         "start_time": start,
                         "end_time": end,
                     })
-                    save_repo(repo)
+                    save_repo(repo)  # Ensure changes are saved to session state
                     st.success(f"Updated CRN {crn}")
 
     with st.expander("Delete Class"):
         crn_delete = st.selectbox("Select CRN to delete", options=df["crn"].tolist(), key="delete_crn") if not df.empty else None
         if crn_delete and st.button("Delete Selected Class"):
             repo.delete_class(crn_delete)
-            save_repo(repo)
+            save_repo(repo)  # Ensure changes are saved to session state
             st.warning(f"Deleted CRN {crn_delete}")
 
 

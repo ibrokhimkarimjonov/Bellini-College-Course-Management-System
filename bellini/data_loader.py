@@ -54,8 +54,7 @@ class BelliniDataLoader:
         }
 
     def load_semester(self, semester: str, filename: str) -> pd.DataFrame:
-        # Update the path to use the correct directory
-        path = Path(__file__).resolve().parent.parent / 'data' / filename
+        path = self.data_dir / filename
         if not path.exists():
             raise FileNotFoundError(f"File not found: {path}")
         xl = pd.ExcelFile(path)
